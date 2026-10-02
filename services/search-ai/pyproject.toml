@@ -1,0 +1,36 @@
+[project]
+name = "search-ai"
+version = "0.5.0"
+description = "Asistente de reservas NLP, buscador semÃ¡ntico con embeddings y web scraping de paquetes turÃ­sticos"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "sqlalchemy==2.0.36",
+    "psycopg2-binary==2.9.10",
+    "httpx==0.28.1",
+    "beautifulsoup4==4.12.3",
+    "pydantic-settings==2.7.0",
+    "scikit-learn==1.6.0",
+    "numpy==2.2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "ruff==0.8.4",
+]
+ml = [
+    "sentence-transformers>=3.0.0",
+    "transformers>=4.44.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

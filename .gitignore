@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+out/
+target/
+*.tsbuildinfo
+
+# Refactor outputs
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Java
+*.class
+*.log
+
+# Misc
+.DS_Store
+Thumbs.db
+coverage/
+tmp/
+*.log
+
+# Docker
+*.pid

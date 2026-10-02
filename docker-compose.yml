@@ -1,0 +1,105 @@
+name: agencia-viajes
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agencia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agencia_viajes}
+      POSTGRES_USER: ${POSTGRES_USER:-agencia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agencia_dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agencia} -d ${POSTGRES_DB:-agencia_viajes}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: agencia-keycloak
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/agencia_keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:-agencia}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-agencia_dev}
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/agencia-viajes/.well-known/openid-configuration HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3; grep -q 'HTTP/1.1 200' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  booking-core:
+    build:
+      context: ./services/booking-core
+      dockerfile: Dockerfile
+    container_name: agencia-booking-core
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-agencia_viajes}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-agencia}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-agencia_dev}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${KEYCLOAK_ISSUER_URI:-http://localhost:8080/realms/agencia-viajes}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${KEYCLOAK_JWKS_URI:-http://keycloak:8080/realms/agencia-viajes/protocol/openid-connect/certs}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  search-ai:
+    build:
+      context: ./services/search-ai
+      dockerfile: Dockerfile
+    container_name: agencia-search-ai
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agencia}:${POSTGRES_PASSWORD:-agencia_dev}@postgres:5432/${POSTGRES_DB:-agencia_viajes}
+      BOOKING_CORE_URL: http://booking-core:8081/api/v1
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      booking-core:
+        condition: service_started
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: agencia-web
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost:8081/api/v1
+      VITE_SEARCH_API_BASE_URL: http://localhost:8082/api/v1
+      VITE_OIDC_AUTHORITY: http://localhost:8080/realms/${KEYCLOAK_REALM:-agencia-viajes}
+      VITE_OIDC_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-agencia-web}
+      VITE_OIDC_REDIRECT_URI: http://localhost:5173/callback
+    ports:
+      - "5173:80"
+    depends_on:
+      - booking-core
+      - search-ai
+
+volumes:
+  postgres_data:

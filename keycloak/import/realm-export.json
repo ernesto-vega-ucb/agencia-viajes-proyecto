@@ -1,0 +1,82 @@
+{
+  "realm": "agencia-viajes",
+  "enabled": true,
+  "displayName": "Agencia de Viajes",
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "defaultSignatureAlgorithm": "RS256",
+  "roles": {
+    "realm": [
+      { "name": "customer", "description": "Usuario final / cliente de la agencia" },
+      { "name": "agent", "description": "Agente de viajes interno" },
+      { "name": "admin", "description": "Administrador del sistema" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "agencia-web",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:5173/callback",
+        "agenciaviajes://oauth",
+        "exp://*",
+        "http://localhost:8083/*",
+        "http://localhost:8084/*",
+        "http://192.168.100.71:8083/*",
+        "http://192.168.100.71:8084/*"
+      ],
+      "webOrigins": ["*"],
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"],
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "introspection.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ],
+      "secret": null
+    },
+    {
+      "clientId": "booking-core",
+      "enabled": true,
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true,
+      "defaultClientScopes": ["openid", "profile"],
+      "secret": "booking-core-secret"
+    }
+  ],
+  "users": [
+    {
+      "id": "7f3a2c1e-9b4d-4e6f-8a0b-3c5d9e1f2a34",
+      "username": "demo@agencia.test",
+      "email": "demo@agencia.test",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Demo",
+      "lastName": "Cliente",
+      "credentials": [
+        { "type": "password", "value": "Demo123!", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    }
+  ]
+}

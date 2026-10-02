@@ -1,0 +1,1 @@
+CREATE DATABASE agencia_keycloak OWNER agencia;

@@ -1,0 +1,36 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: booking-core
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/agencia_viajes}
+    username: ${SPRING_DATASOURCE_USERNAME:agencia}
+    password: ${SPRING_DATASOURCE_PASSWORD:agencia_dev}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8080/realms/agencia-viajes}
+          jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:http://localhost:8080/realms/agencia-viajes/protocol/openid-connect/certs}
+
+logging:
+  level:
+    com.agencia.bookingcore: DEBUG
+    org.hibernate.SQL: WARN

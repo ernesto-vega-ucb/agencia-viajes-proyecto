@@ -1,0 +1,25 @@
+{
+  "name": "agencia-viajes-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo para el sistema de reservas de paquetes turísticos de la agencia de viajes",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:web": "turbo run dev --filter=@agencia/web",
+    "dev:mobile": "turbo run dev --filter=@agencia/mobile",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  }
+}
