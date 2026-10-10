@@ -1,5 +1,14 @@
 import { env } from "../config/env";
-import type { Booking, BookingRequest, SearchResult, TourPackage } from "../types/domain";
+import type {
+  Booking,
+  BookingRequest,
+  ChatResponse,
+  MetricsSummary,
+  ScrapeRefreshResult,
+  ScrapedPackage,
+  SearchResult,
+  TourPackage,
+} from "../types/domain";
 
 export class ApiError extends Error {
   constructor(
@@ -51,6 +60,29 @@ export const bookingApi = {
   getPackage: (id: string, token?: string) =>
     request(env.apiBaseUrl, `/packages/${id}`, { token }) as Promise<TourPackage>,
 
+  syncExternal: (pkg: TourPackage) =>
+    request(env.apiBaseUrl, "/packages/sync", {
+      method: "POST",
+      body: {
+        code: pkg.code,
+        title: pkg.title,
+        destination: pkg.destination,
+        country: pkg.country,
+        description: pkg.description,
+        category: pkg.category,
+        durationDays: pkg.durationDays,
+        basePrice: pkg.basePrice,
+        currency: pkg.currency,
+        rating: pkg.rating,
+        source: pkg.source ?? "EXTERNO",
+        maxTravelers: pkg.maxTravelers,
+        cancelDaysBefore: pkg.cancelDaysBefore,
+        cancelRefundPercent: pkg.cancelRefundPercent,
+        images: pkg.images,
+        startDates: pkg.startDates,
+      },
+    }) as Promise<TourPackage>,
+
   createBooking: (payload: BookingRequest, token: string) =>
     request(env.apiBaseUrl, "/bookings", {
       method: "POST",
@@ -73,6 +105,13 @@ export const searchApi = {
       { token },
     ) as Promise<SearchResult>,
 
+  searchSemantic: (query: string, limit = 10, token?: string) =>
+    request(
+      env.searchApiBaseUrl,
+      `/search/semantic?query=${encodeURIComponent(query)}&limit=${limit}`,
+      { token },
+    ) as Promise<SearchResult>,
+
   ensurePackage: (id: string, token?: string) =>
     request(env.searchApiBaseUrl, `/packages/${id}`, { token }) as Promise<TourPackage>,
 
@@ -91,5 +130,23 @@ export const searchApi = {
   },
 
   listScrapedPackages: (token?: string) =>
-    request(env.searchApiBaseUrl, "/scrape/packages", { token }),
+    request(env.searchApiBaseUrl, "/scrape/packages", { token }) as Promise<
+      ScrapedPackage[]
+    >,
+
+  refreshScrape: (token?: string) =>
+    request(env.searchApiBaseUrl, "/scrape/refresh", {
+      method: "POST",
+      token,
+    }) as Promise<ScrapeRefreshResult>,
+
+  chat: (message: string, token?: string) =>
+    request(env.searchApiBaseUrl, "/assistant/chat", {
+      method: "POST",
+      body: { message },
+      token,
+    }) as Promise<ChatResponse>,
+
+  metricsSummary: (token?: string) =>
+    request(env.searchApiBaseUrl, "/metrics/summary", { token }) as Promise<MetricsSummary>,
 };

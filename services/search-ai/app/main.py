@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import assistant, scrape, search
+from app.api import assistant, metrics, scrape, search
 from app.db import Base, engine
 from app.models import ScrapedPackage, UserHistory  # noqa: F401  (registra modelos)
 from app.services.fusion import refresh_scraped_packages
@@ -27,12 +27,13 @@ async def _startup_scrape() -> None:
 app = FastAPI(
     title="Agencia de Viajes - Search & AI",
     description=(
-        "Asistente de reservas inteligente (intenciones TF-IDF + RegresiÃ³n LogÃ­stica, "
-        "extracciÃ³n de entidades, hook Beto), buscador semÃ¡ntico con embeddings y web "
-        "scraping asÃ­ncrono (httpx + BeautifulSoup) de paquetes turÃ­sticos fusionados "
-        "con datos sintÃ©ticos."
+        "Asistente de reservas inteligente (intenciones TF-IDF + Regresión Logística, "
+        "extracción de entidades, hook Beto), Agente de IA con razonamiento ReAct y "
+        "Tool Calling (Ollama/OpenAI/DeepSeek o planificador determinista offline), "
+        "buscador semántico con embeddings y web scraping asíncrono (httpx + "
+        "BeautifulSoup) de paquetes turísticos fusionados con datos sintéticos."
     ),
-    version="0.5.0",
+    version="0.7.0",
     lifespan=lifespan,
 )
 
@@ -52,6 +53,7 @@ app.add_middleware(
 app.include_router(search.router)
 app.include_router(scrape.router)
 app.include_router(assistant.router)
+app.include_router(metrics.router)
 
 
 @app.get("/api/v1/health")

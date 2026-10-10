@@ -1,23 +1,29 @@
 from fastapi import APIRouter
 
-from app.schemas import ChatRequest, ChatResponse, TourPackageOut
-from app.services.assistant import ChatAssistant, build_assistant
+from app.schemas import (
+    AgentTraceOut,
+    ChatRequest,
+    ChatResponse,
+    NlpDebugOut,
+    TourPackageOut,
+)
+from app.services.agent import AIAgent, build_agent
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["assistant"])
 
-_assistant: ChatAssistant | None = None
+_agent: AIAgent | None = None
 
 
-def _get_assistant() -> ChatAssistant:
-    global _assistant
-    if _assistant is None:
-        _assistant = build_assistant()
-    return _assistant
+def _get_agent() -> AIAgent:
+    global _agent
+    if _agent is None:
+        _agent = build_agent()
+    return _agent
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest) -> ChatResponse:
-    result = _get_assistant().handle(payload.message)
+async def chat(payload: ChatRequest) -> ChatResponse:
+    result = await _get_agent().run(payload.message)
     return ChatResponse(
         message=result["message"],
         intent=result["intent"],
@@ -26,4 +32,6 @@ def chat(payload: ChatRequest) -> ChatResponse:
         entities=result["entities"],
         context=result["context"],
         suggestions=[TourPackageOut(**item) for item in result["suggestions"]],
+        nlp_debug=NlpDebugOut(**result["nlp_debug"]),
+        agent_trace=AgentTraceOut(**result["agent_trace"]),
     )

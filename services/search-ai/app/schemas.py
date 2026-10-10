@@ -68,6 +68,31 @@ class ChatRequest(BaseModel):
     user_id: str | None = None
 
 
+class NlpDebugOut(BaseModel):
+    intent: str
+    confidence: float
+    entities: dict[str, list] = Field(default_factory=dict)
+    scores: dict[str, float] = Field(default_factory=dict)
+    model: str
+
+
+class AgentStepOut(BaseModel):
+    step: int
+    thought: str
+    tool: str | None = None
+    tool_params: dict = Field(default_factory=dict)
+    tool_output: dict | str | None = None
+
+
+class AgentTraceOut(BaseModel):
+    model: str
+    mode: str
+    steps: list[AgentStepOut] = Field(default_factory=list)
+    thought: str | None = None
+    tool_used: str | None = None
+    tool_output: dict | str | None = None
+
+
 class ChatResponse(BaseModel):
     message: str
     intent: str
@@ -76,6 +101,31 @@ class ChatResponse(BaseModel):
     entities: dict[str, list] = Field(default_factory=dict)
     context: dict[str, float | str | None] = Field(default_factory=dict)
     suggestions: list[TourPackageOut] = Field(default_factory=list)
+    nlp_debug: NlpDebugOut | None = None
+    agent_trace: AgentTraceOut | None = None
+
+
+class MetricDatosOut(BaseModel):
+    interacciones_sinteticas: int
+    paquetes_sinteticos: int
+    scrapeados: int
+    total_fusion: int
+    embeddings: str
+    ml_enabled: bool
+
+
+class AgentMetricsOut(BaseModel):
+    tool_selection_accuracy: float
+    task_success_rate: float
+    mode: str
+
+
+class MetricsSummaryOut(BaseModel):
+    datos: MetricDatosOut
+    asistente: dict[str, float]
+    buscador: dict[str, float]
+    entidades: dict[str, float]
+    agente: AgentMetricsOut
 
 
 class SemanticSearchResponse(SearchResponse):

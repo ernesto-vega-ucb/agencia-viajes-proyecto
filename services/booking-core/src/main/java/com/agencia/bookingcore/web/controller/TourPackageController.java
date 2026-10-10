@@ -36,8 +36,8 @@ public class TourPackageController {
     }
 
     @GetMapping("/{id}")
-    public TourPackageResponse getPackage(@PathVariable Long id) {
-        return tourPackageService.getById(id);
+    public TourPackageResponse getPackage(@PathVariable String id) {
+        return tourPackageService.getByIdentifier(id);
     }
 
     @PostMapping("/sync")

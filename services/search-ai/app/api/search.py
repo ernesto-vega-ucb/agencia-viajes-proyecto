@@ -68,12 +68,26 @@ def package_detail(package_id: int) -> TourPackageOut:
     engine = get_search_engine()
     doc = engine.doc(package_id)
     if doc is None:
+        code = _code_for_id(package_id)
+        if code:
+            doc = engine.doc_by_code(code)
+    if doc is None:
         raise HTTPException(status_code=404, detail="Paquete no encontrado en el índice")
     if doc.source == "catalogo":
         payload = doc.to_dict()
     else:
         payload = sync_package(doc)
     return TourPackageOut(**payload)
+
+
+def _code_for_id(package_id: int) -> str | None:
+    if 9000 <= package_id < 9900:
+        number = package_id - 9000
+        return f"EXT-{number:03d}" if number > 0 else None
+    if 8000 <= package_id < 8900:
+        number = package_id - 8000
+        return f"SYN-{number:03d}" if number > 0 else None
+    return None
 
 
 @router.get("/recommendations/{user_id}", response_model=list[TourPackageOut])

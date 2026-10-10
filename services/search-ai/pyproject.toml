@@ -1,7 +1,7 @@
 [project]
 name = "search-ai"
-version = "0.5.0"
-description = "Asistente de reservas NLP, buscador semÃ¡ntico con embeddings y web scraping de paquetes turÃ­sticos"
+version = "0.7.0"
+description = "Asistente de reservas NLP + Agente de IA (ReAct, Tool Calling) con buscador semántico y web scraping de paquetes turísticos"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi==0.115.6",

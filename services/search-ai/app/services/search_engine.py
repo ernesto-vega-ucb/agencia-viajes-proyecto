@@ -16,6 +16,7 @@ from app.services.synthetic import load_synthetic_packages
 from app.services.text_prep import CATEGORY_SYNONYMS, normalize_es
 
 _DURATION_RE = re.compile(r"(?i)(\d{1,2})\s*(?:dias|días|noches)")
+_EXT_CODE_RE = re.compile(r"(?i)EXT[-_]?(\d+)")
 
 _COUNTRY_BY_DESTINATION = {
     "cancun": "México",
@@ -108,6 +109,7 @@ class SearchEngine:
         docs = self._merge_documents(scraped, synthetic)
         self.docs = docs
         self._docs_by_id = {doc.id: doc for doc in docs}
+        self._docs_by_code = {doc.code: doc for doc in docs}
         embeddings.fit([doc.text for doc in docs])
         self._matrix = embeddings.embed([doc.text for doc in docs])
         self._popular_ids = [doc.id for doc in sorted(docs, key=lambda d: d.rating, reverse=True)]
@@ -154,6 +156,9 @@ class SearchEngine:
     def doc(self, doc_id: int) -> PackageDoc | None:
         return self._docs_by_id.get(doc_id)
 
+    def doc_by_code(self, code: str) -> PackageDoc | None:
+        return self._docs_by_code.get(code)
+
     def popular(self, limit: int = 5) -> list[PackageDoc]:
         return [self._docs_by_id[doc_id] for doc_id in self._popular_ids[:limit]]
 
@@ -186,6 +191,8 @@ class SearchEngine:
     ) -> list[PackageDoc]:
         docs = [self._from_catalog(package) for package in self._catalog.packages()]
         seen_destinations = {normalize_es(doc.destination) for doc in docs}
+        seen_codes = {doc.code for doc in docs}
+        seen_titles = {normalize_es(doc.title) for doc in docs}
 
         synthetic = load_synthetic_packages() if synthetic is None else synthetic
         for index, item in enumerate(synthetic):
@@ -200,11 +207,20 @@ class SearchEngine:
         for index, item in enumerate(scraped):
             if not item.get("title") or item.get("price") is None:
                 continue
+            code = _scraped_code(item)
+            if code and code in seen_codes:
+                continue
+            title = normalize_es(item["title"])
+            if title and title in seen_titles:
+                continue
             destination = item.get("destination") or item["title"]
             key = normalize_es(destination)
             if key in seen_destinations:
                 continue
             seen_destinations.add(key)
+            seen_titles.add(title)
+            if code:
+                seen_codes.add(code)
             docs.append(self._from_scraped(index, item))
         return docs
 
@@ -224,6 +240,7 @@ class SearchEngine:
             return []
         return [
             {
+                "db_id": row.id,
                 "source_id": row.source_id,
                 "title": row.title,
                 "destination": row.destination or row.title,
@@ -256,6 +273,8 @@ class SearchEngine:
         return self._build_doc(source="sintetico", **fields)
 
     def _from_catalog(self, package: dict) -> PackageDoc:
+        upstream = str(package.get("source", "")).upper()
+        source = {"SCRAPED": "external", "SINTETICO": "sintetico"}.get(upstream, "catalogo")
         fields = {
             "id": int(package.get("id", 0)),
             "code": package.get("code", f"INT-{package.get('id', 0):03d}"),
@@ -275,14 +294,21 @@ class SearchEngine:
             "cancelRefundPercent": int(package.get("cancelRefundPercent", 100)),
             "active": bool(package.get("active", True)),
         }
-        return self._build_doc(source="catalogo", **fields)
+        return self._build_doc(source=source, **fields)
 
     def _from_scraped(self, index: int, item: dict) -> PackageDoc:
         destination = item.get("destination") or item["title"]
         duration = _duration(item.get("title", "") + " " + destination)
+        code = _scraped_code(item)
+        if code is None and item.get("db_id"):
+            code = f"EXT-{int(item['db_id']):03d}"
+        if code is None:
+            code = f"EXT-{index + 1:03d}"
+        ext_number = _ext_number(code)
+        stable_id = 9000 + ext_number if ext_number is not None else 9000 + index
         fields = {
-            "id": 9000 + index,
-            "code": f"EXT-{index + 1:03d}",
+            "id": stable_id,
+            "code": code,
             "title": item.get("title", "Sin título"),
             "destination": destination,
             "country": item.get("country")
@@ -382,6 +408,22 @@ def _duration(text: str) -> int:
     if "fin de semana" in normalize_es(text, keep_stopwords=True):
         return 2
     return 5
+
+
+def _scraped_code(item: dict) -> str | None:
+    match = _EXT_CODE_RE.search(item.get("source_id") or "")
+    if match:
+        return f"EXT-{int(match.group(1)):03d}"
+    return None
+
+
+def _ext_number(code: str | None) -> int | None:
+    if not code:
+        return None
+    match = _EXT_CODE_RE.search(code)
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 _ENGINE_CACHE: tuple[SearchEngine, float] | None = None

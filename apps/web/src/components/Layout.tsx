@@ -65,7 +65,7 @@ export default function Layout() {
       </main>
 
       <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-        Agencia de Viajes — Monorepo demo
+        Agencia de Viajes — Aplicación de reservas de paquetes turísticos. &copy; {new Date().getFullYear()}
       </footer>
     </div>
   );

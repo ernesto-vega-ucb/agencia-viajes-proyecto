@@ -434,17 +434,26 @@ class ChatAssistant:
                 limit=4,
             )
             suggestions = [doc.to_dict() for doc in docs]
+        rounded_scores = {
+            key: round(value, 3)
+            for key, value in sorted(scores.items(), key=lambda item: -item[1])
+        }
+        confidence = round(float(confidence), 3)
         return {
             "intent": intent,
-            "confidence": round(float(confidence), 3),
-            "scores": {
-                key: round(value, 3)
-                for key, value in sorted(scores.items(), key=lambda item: -item[1])
-            },
+            "confidence": confidence,
+            "scores": rounded_scores,
             "entities": entities,
             "context": context,
             "suggestions": suggestions,
             "message": self._reply(intent, suggestions, context),
+            "nlp_debug": {
+                "intent": intent,
+                "confidence": confidence,
+                "entities": entities,
+                "scores": rounded_scores,
+                "model": "TF-IDF + Regresión Logística",
+            },
         }
 
     def _reply(self, intent: str, suggestions: list[dict], context: dict) -> str:

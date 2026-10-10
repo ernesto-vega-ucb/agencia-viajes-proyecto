@@ -13,6 +13,13 @@ class Settings(BaseSettings):
     beto_enabled: bool = False
     scrape_urls: str = ""
 
+    llm_provider: str = ""
+    llm_base_url: str = ""
+    llm_api_key: str = ""
+    llm_model: str = ""
+    llm_timeout: float = 60.0
+    agent_max_steps: int = 3
+
     @property
     def packages_endpoint(self) -> str:
         return f"{self.booking_core_url}/packages"

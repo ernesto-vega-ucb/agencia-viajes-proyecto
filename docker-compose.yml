@@ -75,6 +75,12 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-agencia}:${POSTGRES_PASSWORD:-agencia_dev}@postgres:5432/${POSTGRES_DB:-agencia_viajes}
       BOOKING_CORE_URL: http://booking-core:8081/api/v1
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_TIMEOUT: ${LLM_TIMEOUT:-60.0}
+      AGENT_MAX_STEPS: ${AGENT_MAX_STEPS:-3}
     ports:
       - "8082:8082"
     depends_on:

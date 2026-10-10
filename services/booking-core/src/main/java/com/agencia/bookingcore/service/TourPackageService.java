@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +36,36 @@ public class TourPackageService {
         TourPackage tourPackage = packageRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paquete no encontrado: " + id));
         return mapper.toResponse(tourPackage);
+    }
+
+    @Transactional(readOnly = true)
+    public TourPackageResponse getByIdentifier(String identifier) {
+        String code = identifier;
+        if (identifier != null && identifier.matches("\\d+")) {
+            Long id = Long.parseLong(identifier);
+            Optional<TourPackage> byId = packageRepository.findByIdAndActiveTrue(id);
+            if (byId.isPresent()) {
+                return mapper.toResponse(byId.get());
+            }
+            code = codeForEngineId(id);
+        }
+        if (code == null) {
+            throw new ResourceNotFoundException("Paquete no encontrado: " + identifier);
+        }
+        return packageRepository.findByCode(code)
+                .filter(tourPackage -> Boolean.TRUE.equals(tourPackage.getActive()))
+                .map(mapper::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Paquete no encontrado: " + identifier));
+    }
+
+    private String codeForEngineId(long id) {
+        if (id >= 9000 && id <= 9899) {
+            return String.format("EXT-%03d", id - 9000);
+        }
+        if (id >= 8000 && id <= 8899) {
+            return String.format("SYN-%03d", id - 8000);
+        }
+        return null;
     }
 
     @Transactional

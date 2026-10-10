@@ -7,6 +7,8 @@ invocan refresh_scraped_packages() para mantener el buscador indexando los
 paquetes externos dinámicos junto a los locales y sintéticos.
 """
 
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -16,46 +18,50 @@ from app.services.async_scraper import AsyncPackageScraper
 from app.services.search_engine import reset_search_engine
 
 
-def _persist(db: Session, records: list[dict], source: str) -> int:
-    count = 0
+def upsert_scraped(db: Session, records: list[dict], source: str) -> tuple[int, int]:
+    inserted = updated = 0
     for package in records:
-        existing = (
-            db.query(ScrapedPackage)
-            .filter(ScrapedPackage.source_id == package["source_id"])
-            .first()
-        )
-        if not package["source_id"] or not existing:
-            db.add(
-                ScrapedPackage(
-                    source=source,
-                    source_id=str(package["source_id"])[:128] if package["source_id"] else None,
-                    title=package["title"][:512],
-                    destination=package["destination"][:256] if package["destination"] else None,
-                    price=package["price"],
-                    currency=package["currency"],
-                    url=package["url"],
-                )
-            )
-            count += 1
+        source_id = str(package["source_id"])[:128] if package["source_id"] else None
+        if not source_id:
+            continue
+        values = {
+            "source": source,
+            "title": package["title"][:512],
+            "destination": package["destination"][:256] if package["destination"] else None,
+            "price": package["price"],
+            "currency": package["currency"],
+            "url": package["url"],
+        }
+        existing = db.query(ScrapedPackage).filter(ScrapedPackage.source_id == source_id).first()
+        if existing is not None:
+            for key, value in values.items():
+                setattr(existing, key, value)
+            existing.scraped_at = datetime.utcnow()
+            updated += 1
+        else:
+            db.add(ScrapedPackage(scraped_at=datetime.utcnow(), source_id=source_id, **values))
+            inserted += 1
     db.commit()
-    return count
+    return inserted, updated
 
 
 async def refresh_scraped_packages() -> dict:
     settings = get_settings()
     records = await AsyncPackageScraper().scrape(settings.scrape_url_list or None)
+    source = "async" if settings.scrape_url_list else "fixtures"
     try:
         db = SessionLocal()
         try:
-            new = _persist(db, records, source="async" if settings.scrape_url_list else "fixtures")
+            inserted, updated = upsert_scraped(db, records, source)
         finally:
             db.close()
     except Exception:  # noqa: BLE001 (BD temporal no disponible -> memoria)
-        new = 0
+        inserted = updated = 0
     reset_search_engine()
     return {
         "funcion": "refresh_scraped_packages",
         "extraidos": len(records),
-        "nuevos_guardados": new,
-        "fuente": "async" if settings.scrape_url_list else "fixtures",
+        "nuevos_guardados": inserted,
+        "actualizados": updated,
+        "fuente": source,
     }
